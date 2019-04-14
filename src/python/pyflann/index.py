@@ -173,7 +173,9 @@ class FLANN(object):
         speedup = c_float(0)
         self.__curindex = flann.build_index[pts.dtype.type](
             pts, npts, dim, byref(speedup), pointer(self.__flann_parameters))
-        self.__curindex_data = pts
+        self.__npts = npts
+        self.__dim = dim
+        #self.__curindex_data = pts
         self.__curindex_type = pts.dtype.type
 
         params = dict(self.__flann_parameters)
@@ -209,16 +211,18 @@ class FLANN(object):
 
         self.__curindex = flann.load_index[pts.dtype.type](
             c_char_p(to_bytes(filename)), pts, npts, dim)
-        self.__curindex_data = pts
+        self.__npts = npts
+        self.__dim = dim
+        #self.__curindex_data = pts
         self.__curindex_type = pts.dtype.type
-        
-        
+
+
     def used_memory(self):
         """
         Returns the number of bytes consumed by the index.
         """
         return flann.used_memory[self.__curindex_type](self.__curindex)
-        
+
     def add_points(self, pts, rebuild_threshold=2.0):
         """
         Adds points to pre-built index.
@@ -228,21 +232,23 @@ class FLANN(object):
             rebuild_threshold: reallocs index when it grows by factor of \
                 `rebuild_threshold`. A smaller value results is more space \
                 efficient but less computationally efficient. Must be greater \
-                than 1.           
+                than 1.
         """
         if not pts.dtype.type in allowed_types:
             raise FLANNException("Cannot handle type: %s"%pts.dtype)
-        pts = ensure_2d_array(pts,default_flags) 
+        pts = ensure_2d_array(pts,default_flags)
         npts, dim = pts.shape
         flann.add_points[self.__curindex_type](self.__curindex, pts, npts, dim, rebuild_threshold)
-        self.__curindex_data = np.row_stack((self.__curindex_data,pts))
-        
+        #self.__curindex_data = np.row_stack((self.__curindex_data,pts))
+        self.__npts += len(pts)
+
     def remove_point(self, idx):
         """
-        Removes a point from a pre-built index.         
+        Removes a point from a pre-built index.
         """
         flann.remove_point[self.__curindex_type](self.__curindex, idx)
-        self.__curindex_data = np.delete(self.__curindex_data,idx,axis=0)
+        #self.__curindex_data = np.delete(self.__curindex_data,idx,axis=0)
+        self.__npts -= 1
 
     def nn_index(self, qpts, num_neighbors=1, **kwargs):
         """
@@ -259,11 +265,11 @@ class FLANN(object):
             raise FLANNException('Cannot handle type: %s' % qpts.dtype)
 
         if self.__curindex_type != qpts.dtype.type:
-            raise FLANNException('Index and query must have the same type')
+            raise FLANNException('Index and query must have the same type', self.__curindex_type,qpts.dtype.type)
 
         qpts = ensure_2d_array(qpts, default_flags)
 
-        npts, dim = self.__curindex_data.shape
+        npts, dim = self.__npts, self.__dim
 
         if qpts.size == dim:
             qpts.reshape(1, dim)
@@ -303,7 +309,7 @@ class FLANN(object):
         if self.__curindex_type != query.dtype.type:
             raise FLANNException('Index and query must have the same type')
 
-        npts, dim = self.__curindex_data.shape
+        npts, dim = self.__npts, self.__dim #self.__curindex_data.shape
         assert query.shape[0] == dim, 'data and query must have the same dims'
 
         result = np.empty(npts, dtype=index_type)
@@ -333,7 +339,7 @@ class FLANN(object):
             flann.free_index[self.__curindex_type](
                 self.__curindex, pointer(self.__flann_parameters))
             self.__curindex = None
-            self.__curindex_data = None
+            #self.__curindex_data = None
 
     ##########################################################################
     # Clustering functions
