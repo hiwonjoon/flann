@@ -372,8 +372,7 @@ int __flann_remove_point(flann_index_t index_ptr, unsigned int point_id_uint) {
             throw FLANNException("Invalid index");
         }
         Index<Distance>* index = (Index<Distance>*)index_ptr;
-        index->removePoint(point_id);
-        return 0;
+        return index->removePoint(point_id);
     }
     catch (std::runtime_error& e) {
         Logger::error("Caught exception: %s\n",e.what());
@@ -965,11 +964,10 @@ int __flann_find_nearest_neighbors_index(flann_index_t index_ptr, typename Dista
         Matrix<DistanceType> m_dists(dists, tcount, nn);
 
         SearchParams search_params = create_search_params(flann_params);
-        index->knnSearch(Matrix<ElementType>(testset, tcount, index->veclen()),
-                         m_indices,
-                         m_dists, nn, search_params );
+        return index->knnSearch(Matrix<ElementType>(testset, tcount, index->veclen()),
+                                m_indices,
+                                m_dists, nn, search_params );
 
-        return 0;
     }
     catch (std::runtime_error& e) {
         Logger::error("Caught exception: %s\n",e.what());
@@ -1316,5 +1314,76 @@ int flann_compute_cluster_centers_byte(unsigned char* dataset, int rows, int col
 int flann_compute_cluster_centers_int(int* dataset, int rows, int cols, int clusters, float* result, FLANNParameters* flann_params)
 {
     return _flann_compute_cluster_centers(dataset, rows, cols, clusters, result, flann_params);
+}
+
+template <typename Distance>
+int __flann_rebuild_index(flann_index_t index_ptr) {
+    try {
+        if (index_ptr==NULL) {
+            throw FLANNException("Invalid index");
+        }
+        Index<Distance>* index = (Index<Distance>*)index_ptr;
+        index->buildIndex();
+
+        return 1;
+    }
+    catch (std::runtime_error& e) {
+        Logger::error("Caught exception: %s\n",e.what());
+        return 0;
+    }
+}
+
+template <typename T>
+int _flann_rebuild_index(flann_index_t index_ptr) {
+    if (flann_distance_type==FLANN_DIST_EUCLIDEAN) {
+        return __flann_rebuild_index<L2<T> >(index_ptr);
+    }
+    else if (flann_distance_type==FLANN_DIST_MANHATTAN) {
+        return __flann_rebuild_index<L1<T> >(index_ptr);
+    }
+    else if (flann_distance_type==FLANN_DIST_MINKOWSKI) {
+        return __flann_rebuild_index<MinkowskiDistance<T> >(index_ptr);
+    }
+    else if (flann_distance_type==FLANN_DIST_HIST_INTERSECT) {
+        return __flann_rebuild_index<HistIntersectionDistance<T> >(index_ptr);
+    }
+    else if (flann_distance_type==FLANN_DIST_HELLINGER) {
+        return __flann_rebuild_index<HellingerDistance<T> >(index_ptr);
+    }
+    else if (flann_distance_type==FLANN_DIST_CHI_SQUARE) {
+        return __flann_rebuild_index<ChiSquareDistance<T> >(index_ptr);
+    }
+    else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
+        return __flann_rebuild_index<KL_Divergence<T> >(index_ptr);
+    }
+    else {
+        Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");
+        return 0;
+    }
+}
+
+int flann_rebuild_index(flann_index_t index_ptr)
+{
+    return _flann_rebuild_index<float>(index_ptr);
+}
+
+int flann_rebuild_index_float(flann_index_t index_ptr)
+{
+    return _flann_rebuild_index<float>(index_ptr);
+}
+
+int flann_rebuild_index_double(flann_index_t index_ptr)
+{
+    return _flann_rebuild_index<double>(index_ptr);
+}
+
+int flann_rebuild_index_byte(flann_index_t index_ptr)
+{
+    return _flann_rebuild_index<unsigned char>(index_ptr);
+}
+
+int flann_rebuild_index_int(flann_index_t index_ptr)
+{
+    return _flann_rebuild_index<int>(index_ptr);
 }
 

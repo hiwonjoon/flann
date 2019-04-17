@@ -595,6 +595,20 @@ FLANN_EXPORT int flann_compute_cluster_centers_int(int* dataset,
                                                    float* result,
                                                    struct FLANNParameters* flann_params);
 
+/**
+ * rebuild index
+ *
+*/
+FLANN_EXPORT int flann_rebuild_index(flann_index_t index_ptr);
+
+FLANN_EXPORT int flann_rebuild_index_float(flann_index_t index_ptr);
+
+FLANN_EXPORT int flann_rebuild_index_double(flann_index_t index_ptr);
+
+FLANN_EXPORT int flann_rebuild_index_byte(flann_index_t index_ptr);
+
+FLANN_EXPORT int flann_rebuild_index_int(flann_index_t index_ptr);
+
 
 #ifdef __cplusplus
 }

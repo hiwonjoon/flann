@@ -155,9 +155,9 @@ public:
      * Remove point from the index
      * @param index Index of point to be removed
      */
-    void removePoint(size_t point_id)
+    int removePoint(size_t point_id)
     {
-    	nnIndex_->removePoint(point_id);
+    	return nnIndex_->removePoint(point_id);
     }
 
     /**

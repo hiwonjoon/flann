@@ -124,6 +124,7 @@ public:
 	 */
 	virtual void buildIndex()
 	{
+
     	freeIndex();
     	cleanRemovedPoints();
 
@@ -158,7 +159,7 @@ public:
      * Remove point from the index
      * @param index Index of point to be removed
      */
-    virtual void removePoint(size_t id)
+    virtual int removePoint(size_t id)
     {
     	if (!removed_) {
     		ids_.resize(size_);
@@ -175,7 +176,11 @@ public:
     	if (point_index!=size_t(-1) && !removed_points_.test(point_index)) {
     		removed_points_.set(point_index);
     		removed_count_++;
+            return 1;
     	}
+        else {
+            return 0;
+        }
     }
 
 

@@ -26,7 +26,7 @@
 
 #from pyflann.flann_ctypes import *  # NOQA
 import sys
-from ctypes import pointer, c_float, byref, c_char_p
+from ctypes import pointer, c_float, byref, c_char_p, c_uint
 from pyflann.flann_ctypes import (flannlib, FLANNParameters, allowed_types,
                                   ensure_2d_array, default_flags, flann)
 import numpy as np
@@ -35,7 +35,7 @@ from pyflann.exceptions import FLANNException
 import numpy.random as _rn
 
 
-index_type = np.int32
+index_type = np.uint32
 
 
 def set_distance_type(distance_type, order=0):
@@ -246,9 +246,11 @@ class FLANN(object):
         """
         Removes a point from a pre-built index.
         """
-        flann.remove_point[self.__curindex_type](self.__curindex, idx)
+        ret = flann.remove_point[self.__curindex_type](self.__curindex, c_uint(idx))
         #self.__curindex_data = np.delete(self.__curindex_data,idx,axis=0)
         self.__npts -= 1
+
+        return ret
 
     def nn_index(self, qpts, num_neighbors=1, **kwargs):
         """
@@ -281,21 +283,21 @@ class FLANN(object):
 
         result = np.empty((nqpts, num_neighbors), dtype=index_type)
         if self.__curindex_type == np.float64:
-            dists = np.empty((nqpts, num_neighbors), dtype=np.float64)
+            dists = np.ones((nqpts, num_neighbors), dtype=np.float64) * -1
         else:
-            dists = np.empty((nqpts, num_neighbors), dtype=np.float32)
+            dists = np.ones((nqpts, num_neighbors), dtype=np.float32) * -1
 
         self.__flann_parameters.update(kwargs)
 
-        flann.find_nearest_neighbors_index[
+        count = flann.find_nearest_neighbors_index[
             self.__curindex_type](
             self.__curindex, qpts, nqpts, result, dists, num_neighbors,
             pointer(self.__flann_parameters))
 
         if num_neighbors == 1:
-            return (result.reshape(nqpts), dists.reshape(nqpts))
+            return (result.reshape(nqpts), dists.reshape(nqpts), count)
         else:
-            return (result, dists)
+            return (result, dists, count)
 
     def nn_radius(self, query, radius, **kwargs):
 
@@ -326,6 +328,9 @@ class FLANN(object):
             pointer(self.__flann_parameters))
 
         return (result[0:nn], dists[0:nn])
+
+    def rebuild_index(self):
+        return flann.rebuild_index[self.__curindex_type](self.__curindex)
 
     def delete_index(self, **kwargs):
         """

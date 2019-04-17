@@ -144,7 +144,7 @@ public:
     }
 
 
-    void removePoint(size_t index)
+    int removePoint(size_t index)
     {
     	throw FLANNException( "removePoint not implemented for this index type!" );
     }
